@@ -1,0 +1,25 @@
+.glossary-section {
+  background: linear-gradient(135deg, #004e98, #002b5b);
+  min-height: 100vh;
+  padding-top: 100px;
+  padding-bottom: 60px;
+}
+
+.glossary-list {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.list-group-item {
+  padding: 1.2rem;
+  font-size: 1rem;
+  color: #002b5b;
+}
+
+.list-group-item:nth-child(odd) {
+  background: #f8f9fa;
+}
+
+.list-group-item:nth-child(even) {
+  background: #e9ecef;
+}

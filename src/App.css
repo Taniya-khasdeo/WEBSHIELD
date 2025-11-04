@@ -1,0 +1,24 @@
+/* === Global Layout Fixes === */
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* Prevent right-side white gap on all pages */
+.container, .row {
+  margin: 0 !important;
+  padding: 0 !important;
+  max-width: 100% !important;
+}
+
+/* Fix for hero section overflow */
+.hero-section {
+  width: 100%;
+  overflow: hidden;
+}
