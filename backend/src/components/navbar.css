@@ -1,0 +1,47 @@
+/* Blue themed navbar styling */
+.custom-navbar {
+  background: linear-gradient(90deg, #002B5B, #004E98);
+  backdrop-filter: blur(10px);
+  padding: 0.8rem 1rem;
+  transition: all 0.3s ease-in-out;
+  z-index: 1000;
+}
+
+/* Logo styling */
+.navbar-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+}
+.navbar-logo:hover {
+  transform: scale(1.1);
+}
+
+/* Brand text */
+.brand-text {
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+
+/* Nav links */
+.nav-link {
+  color: #e0e0e0 !important;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: color 0.3s, border-bottom 0.3s;
+  padding-bottom: 4px;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: #ffffff !important;
+  border-bottom: 2px solid #ffffff;
+}
+
+/* Smooth fixed-top spacing (to prevent content hiding under navbar) */
+body {
+  padding-top: 70px;
+}
