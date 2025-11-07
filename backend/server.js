@@ -5,7 +5,7 @@ const axios = require("axios");
 const cors = require("cors");
 const { body, validationResult } = require("express-validator");
 const { analyzeWithLLM } = require("./llm");
-const Scan = require("./models/Scan");
+const Scan = require("./models/scan");
 
 const app = express();
 
