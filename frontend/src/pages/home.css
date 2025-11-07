@@ -1,0 +1,125 @@
+.hero-section {
+  background: linear-gradient(135deg, #004e98, #002b5b);
+  color: white;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  text-align: center;
+  padding-top: 90px;
+  padding-bottom: 60px;
+}
+
+.hero-content {
+  max-width: 900px;
+}
+
+input.form-control {
+  border-radius: 8px;
+  border: none;
+  padding: 0.8rem 1rem;
+}
+
+button.btn {
+  border-radius: 8px;
+  padding: 0.8rem 1.5rem;
+  transition: all 0.3s ease;
+}
+
+button.btn:hover {
+  transform: scale(1.05);
+  background-color: #ffca2c;
+}
+
+.result-box {
+  width: 50%;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #002b5b;
+  font-weight: 500;
+}
+
+.features h4 {
+  color: #ffc107;
+  margin-bottom: 0.5rem;
+}
+
+/* ========================= */
+/*  Built With Section       */
+/* ========================= */
+.built-with {
+  margin-top: 60px;
+}
+
+.tech-stack {
+  gap: 15px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.tech-badge {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #ffc107;
+  color: #ffc107;
+  padding: 8px 16px;
+  border-radius: 25px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.tech-badge:hover {
+  background: #ffc107;
+  color: #002b5b;
+  transform: scale(1.05);
+}
+
+/* ========================= */
+/*  Credits Section          */
+/* ========================= */
+.credits {
+  margin-top: 50px;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  opacity: 0.9;
+}
+
+.names {
+  font-weight: 600;
+  color: #ffc107;
+}
+
+/* Optional glowing animation for “Built With” badges */
+@keyframes glow {
+  0% { box-shadow: 0 0 5px #ffc107; }
+  50% { box-shadow: 0 0 20px #ffc107; }
+  100% { box-shadow: 0 0 5px #ffc107; }
+}
+
+.tech-badge:hover {
+  animation: glow 1.5s infinite;
+}
+
+/* ========================= */
+/*  Footer Section           */
+/* ========================= */
+.footer {
+  background: #002b5b;
+  color: white;
+  text-align: center;
+  padding: 20px 0;
+  border-top: 1px solid #ffc107;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+}
+
+.footer p {
+  margin: 0;
+  opacity: 0.9;
+}
+
+.footer span {
+  color: #ffc107;
+  font-weight: 600;
+}
+
+
