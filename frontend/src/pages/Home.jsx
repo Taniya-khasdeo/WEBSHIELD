@@ -15,8 +15,8 @@ function Home() {
       // Get the backend URL from environment variable
       const apiUrl = import.meta.env.VITE_API_URL;
 
-      // Send URL to backend API
-      const response = await fetch(`${apiUrl}/`, {
+      // Send URL to backend API (use correct endpoint)
+      const response = await fetch(`${apiUrl}/api/check-url`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -24,8 +24,18 @@ function Home() {
         body: JSON.stringify({ url }),
       });
 
-      const data = await response.json();
+      // Safely parse JSON response
+      let data;
+      try {
+        data = await response.json();
+      } catch (err) {
+        console.error("❌ Failed to parse JSON:", err);
+        setResult("❌ Server returned invalid response. Try again later.");
+        setLoading(false);
+        return;
+      }
 
+      // Update result based on backend response
       if (data.safe) {
         setResult("✅ This website appears safe.");
       } else {
@@ -113,3 +123,4 @@ function Home() {
 }
 
 export default Home;
+
