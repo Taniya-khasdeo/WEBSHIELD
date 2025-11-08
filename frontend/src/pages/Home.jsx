@@ -12,19 +12,14 @@ function Home() {
     setResult("");
 
     try {
-      // Get the backend URL from environment variable
       const apiUrl = import.meta.env.VITE_API_URL;
 
-      // Send URL to backend API (use correct endpoint)
       const response = await fetch(`${apiUrl}/api/check-url`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
 
-      // Safely parse JSON response
       let data;
       try {
         data = await response.json();
@@ -35,11 +30,20 @@ function Home() {
         return;
       }
 
-      // Update result based on backend response
-      if (data.safe) {
-        setResult("✅ This website appears safe.");
+      // Show verdict, confidence, and reasons
+      if (data.llmResult) {
+        const { verdict, confidence, reasons } = data.llmResult;
+        setResult(
+          `🔹 Verdict: ${verdict.toUpperCase()}\n🔹 Confidence: ${confidence}%\n🔹 Reasons: ${reasons.join(
+            ", "
+          )}`
+        );
       } else {
-        setResult("⚠️ Potential phishing link detected! Be cautious.");
+        setResult(
+          data.safe
+            ? "✅ This website appears safe."
+            : "⚠️ Potential phishing link detected! Be cautious."
+        );
       }
     } catch (error) {
       console.error("Error checking URL:", error);
@@ -60,7 +64,6 @@ function Home() {
             WebShield helps you detect and prevent phishing websites before you click.
           </p>
 
-          {/* URL input form */}
           <form
             onSubmit={handleCheck}
             className="d-flex justify-content-center mb-3"
@@ -82,14 +85,15 @@ function Home() {
             </button>
           </form>
 
-          {/* Result box */}
           {result && (
-            <div className="alert alert-info result-box mx-auto mt-3">
+            <div
+              className="alert alert-info result-box mx-auto mt-3"
+              style={{ whiteSpace: "pre-line" }}
+            >
               {result}
             </div>
           )}
 
-          {/* Features Section */}
           <div className="features mt-5">
             <div className="row text-light">
               <div className="col-md-4">
@@ -109,7 +113,6 @@ function Home() {
         </div>
       </section>
 
-      {/* Footer Section */}
       <footer className="footer text-center text-light py-3">
         <div className="container">
           <p className="mb-1">👩‍💻 Developed by</p>
@@ -123,4 +126,3 @@ function Home() {
 }
 
 export default Home;
-

@@ -36,7 +36,7 @@ mongoose
 // Health check
 app.get("/", (req, res) => res.send("🌐 WebShield backend is running!"));
 
-// POST endpoint
+// POST endpoint to check URL
 app.post(
   "/api/check-url",
   body("url").isURL({ require_protocol: true }),
@@ -48,22 +48,30 @@ app.post(
     const { url } = req.body;
 
     try {
+      // Fetch headers and final URL after redirects
       const response = await axios.head(url, { maxRedirects: 5, timeout: 8000 });
       const finalUrl = response.request?.res?.responseUrl || url;
 
+      // Fetch HTML content (limited to first 8000 chars)
       const htmlResp = await axios.get(finalUrl, { timeout: 10000 });
       const htmlContent = htmlResp.data.slice(0, 8000);
 
+      // Analyze with LLM
       const llmResult = await analyzeWithLLM(finalUrl, htmlContent);
 
+      // Save scan to MongoDB
       const scan = new Scan({ submittedUrl: url, finalUrl, llmResult });
       await scan.save();
 
+      // Determine if the site is safe based on LLM verdict
+      const safe = llmResult.verdict === "safe";
+
+      // Send response to frontend
       res.json({
         success: true,
-        safe: llmResult.includes("safe"),
+        safe,
         finalUrl,
-        llmResult,
+        llmResult, // includes verdict, confidence, reasons
       });
     } catch (error) {
       console.error("❌ Error checking URL:", error.message);
@@ -75,4 +83,5 @@ app.post(
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
 
