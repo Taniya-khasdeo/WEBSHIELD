@@ -15,7 +15,7 @@ app.use(express.json());
 // ✅ Allow frontend access (CORS setup)
 app.use(
   cors({
-    origin: "http://localhost:5713", // your frontend port
+    origin: "https://webshield.vercel.app", // your frontend port
     methods: ["GET", "POST"],
   })
 );

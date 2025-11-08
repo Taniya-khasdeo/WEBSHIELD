@@ -12,8 +12,11 @@ function Home() {
     setResult("");
 
     try {
+      // Get the backend URL from environment variable
+      const apiUrl = import.meta.env.VITE_API_URL;
+
       // Send URL to backend API
-      const response = await fetch("https://webshield-l4t8.onrender.com", {
+      const response = await fetch(`${apiUrl}/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -110,6 +113,3 @@ function Home() {
 }
 
 export default Home;
-
-
-
