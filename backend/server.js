@@ -1,4 +1,8 @@
-require("dotenv").config();
+// Load .env only in development
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config();
+}
+
 const express = require("express");
 const mongoose = require("mongoose");
 const axios = require("axios");
@@ -9,32 +13,30 @@ const Scan = require("./models/scan");
 
 const app = express();
 
-// ✅ Middleware
+// Middleware
 app.use(express.json());
 
-// ✅ Allow frontend access (CORS setup)
+// CORS setup
 app.use(
   cors({
     origin: [
-      "http://localhost:5713",         // local development
+      "http://localhost:5713",         // local frontend
       "https://webshield.vercel.app",  // production frontend
     ],
     methods: ["GET", "POST"],
   })
 );
 
-// ✅ Connect to MongoDB
+// Connect to MongoDB
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-// ✅ Basic health check route
-app.get("/", (req, res) => {
-  res.send("🌐 WebShield backend is running!");
-});
+// Health check
+app.get("/", (req, res) => res.send("🌐 WebShield backend is running!"));
 
-// ✅ POST endpoint: Check website safety
+// POST endpoint
 app.post(
   "/api/check-url",
   body("url").isURL({ require_protocol: true }),
@@ -46,29 +48,20 @@ app.post(
     const { url } = req.body;
 
     try {
-      // Fetch headers
       const response = await axios.head(url, { maxRedirects: 5, timeout: 8000 });
       const finalUrl = response.request?.res?.responseUrl || url;
 
-      // Fetch HTML content
       const htmlResp = await axios.get(finalUrl, { timeout: 10000 });
       const htmlContent = htmlResp.data.slice(0, 8000);
 
-      // Analyze using LLM
       const llmResult = await analyzeWithLLM(finalUrl, htmlContent);
 
-      // Save to MongoDB
-      const scan = new Scan({
-        submittedUrl: url,
-        finalUrl,
-        llmResult,
-      });
+      const scan = new Scan({ submittedUrl: url, finalUrl, llmResult });
       await scan.save();
 
-      // ✅ Send response to frontend
       res.json({
         success: true,
-        safe: llmResult.includes("safe"), // just an example check
+        safe: llmResult.includes("safe"),
         finalUrl,
         llmResult,
       });
@@ -79,6 +72,7 @@ app.post(
   }
 );
 
-// ✅ Start the server
+// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
