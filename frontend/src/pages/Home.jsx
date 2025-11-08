@@ -13,7 +13,7 @@ function Home() {
 
     try {
       // Send URL to backend API
-      const response = await fetch("http://localhost:5000/api/check-url", {
+      const response = await fetch("https://webshield-l4t8.onrender.com", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
