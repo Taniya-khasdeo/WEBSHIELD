@@ -16,16 +16,17 @@ const app = express();
 // Middleware
 app.use(express.json());
 
-// CORS setup
+// ✅ CORS setup
 app.use(
   cors({
-    origin: [
-      "http://localhost:5713",
-      "https://webshield.vercel.app",
-    ],
-    methods: ["GET", "POST"],
+    origin: ["http://localhost:5713", "https://webshield.vercel.app"],
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// Handle OPTIONS preflight requests
+app.options("*", cors());
 
 // Connect to MongoDB
 mongoose
