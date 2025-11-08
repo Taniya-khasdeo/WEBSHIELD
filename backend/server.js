@@ -20,8 +20,8 @@ app.use(express.json());
 app.use(
   cors({
     origin: [
-      "http://localhost:5713",         // local frontend
-      "https://webshield.vercel.app",  // production frontend
+      "http://localhost:5713",
+      "https://webshield.vercel.app",
     ],
     methods: ["GET", "POST"],
   })
@@ -36,6 +36,9 @@ mongoose
 // Health check
 app.get("/", (req, res) => res.send("🌐 WebShield backend is running!"));
 
+// Whitelist safe domains
+const whitelist = ["google.com", "github.com", "mozilla.org", "example.com", "spotify.com"];
+
 // POST endpoint to check URL
 app.post(
   "/api/check-url",
@@ -48,12 +51,19 @@ app.post(
     const { url } = req.body;
 
     try {
-      // Fetch headers and final URL after redirects
-      const response = await axios.head(url, { maxRedirects: 5, timeout: 8000 });
+      // Fetch headers and final URL after redirects with User-Agent
+      const response = await axios.head(url, {
+        maxRedirects: 5,
+        timeout: 8000,
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+      });
       const finalUrl = response.request?.res?.responseUrl || url;
 
-      // Fetch HTML content (limited to first 8000 chars)
-      const htmlResp = await axios.get(finalUrl, { timeout: 10000 });
+      // Fetch HTML content
+      const htmlResp = await axios.get(finalUrl, {
+        timeout: 10000,
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+      });
       const htmlContent = htmlResp.data.slice(0, 8000);
 
       // Analyze with LLM
@@ -63,15 +73,16 @@ app.post(
       const scan = new Scan({ submittedUrl: url, finalUrl, llmResult });
       await scan.save();
 
-      // Determine if the site is safe based on LLM verdict
-      const safe = llmResult.verdict === "safe";
+      // Check whitelist or LLM verdict
+      const safe =
+        whitelist.some(domain => finalUrl.includes(domain)) ||
+        llmResult.verdict === "safe";
 
-      // Send response to frontend
       res.json({
         success: true,
         safe,
         finalUrl,
-        llmResult, // includes verdict, confidence, reasons
+        llmResult,
       });
     } catch (error) {
       console.error("❌ Error checking URL:", error.message);
@@ -83,5 +94,3 @@ app.post(
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
-
-
