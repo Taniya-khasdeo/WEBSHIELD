@@ -1,4 +1,4 @@
-// Load .env only in development
+// Load .env in development
 if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
@@ -14,7 +14,15 @@ const Scan = require("./models/scan");
 const app = express();
 app.use(express.json());
 
-// ✅ CORS setup
+// --- PROCESS LEVEL HANDLERS ---
+process.on("unhandledRejection", (reason, p) => {
+  console.error("UNHANDLED REJECTION at:", p, "reason:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("UNCAUGHT EXCEPTION:", err);
+});
+
+// --- CORS ---
 app.use(
   cors({
     origin: ["http://localhost:5713", "https://webshield.vercel.app"],
@@ -23,20 +31,15 @@ app.use(
   })
 );
 
-// Standard OPTIONS handler
-app.use(cors()); // apply CORS middleware globally
-
-
-// Connect to MongoDB
+// --- MONGODB ---
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// Health check
 app.get("/", (req, res) => res.send("🌐 WebShield backend is running!"));
 
-// Whitelist for known safe domains
+// --- WHITELIST ---
 const whitelist = [
   "google.com",
   "github.com",
@@ -48,21 +51,19 @@ const whitelist = [
   "amazon.com",
 ];
 
-// Helper to check whitelist
 function isWhitelisted(finalUrl) {
   if (!finalUrl) return false;
   const norm = finalUrl.toLowerCase();
   return whitelist.some((d) => norm.includes(d));
 }
 
-// Deterministic phishing detection
+// --- PHISHING DETECTION ---
 function detectPhishing(inputUrl) {
   const reasons = [];
   let urlObj;
-
   try {
     urlObj = new URL(inputUrl);
-  } catch {
+  } catch (err) {
     return { flagged: true, reasons: ["Invalid URL format"] };
   }
 
@@ -71,59 +72,62 @@ function detectPhishing(inputUrl) {
   const search = urlObj.search.toLowerCase();
   const protocol = urlObj.protocol.toLowerCase();
 
-  // 1) HTTPS check
   if (protocol !== "https:") reasons.push("Uses HTTP or missing HTTPS");
 
-  // 2) Suspicious keywords
   const suspiciousPatterns = [
-    "login", "signin", "verify", "update", "account", "secure", "bank",
-    "confirm", "ebaylogin", "paypal", "password", "token", "auth", "session",
-    "verify-account",
+    "login","signin","verify","update","account","secure",
+    "bank","confirm","ebaylogin","paypal","password","token",
+    "auth","session","verify-account",
   ];
-  if (suspiciousPatterns.some(p => hostname.includes(p) || pathname.includes(p) || search.includes(p))) {
+  if (
+    suspiciousPatterns.some(
+      (p) => hostname.includes(p) || pathname.includes(p) || search.includes(p)
+    )
+  ) {
     reasons.push("Contains suspicious keywords (login / verify / account / token...)");
   }
 
-  // 3) Multiple subdomains
   const dotCount = (hostname.match(/\./g) || []).length;
   if (dotCount > 3) reasons.push("Multiple subdomains (unusually long hostname)");
 
-  // 4) IP address as hostname
   const ipRegex = /^(?:\d{1,3}\.){3}\d{1,3}$/;
   if (ipRegex.test(hostname)) reasons.push("Hostname is an IP address");
 
-  // 5) '@' in URL
   if (inputUrl.includes("@")) reasons.push("Contains '@' symbol");
 
-  // 6) Punycode / xn--
-  if (hostname.includes("xn--")) reasons.push("Punycode domain (possible homograph attack)");
+  if (hostname.includes("xn--")) reasons.push("Punycode domain (possible homograph / IDN attack)");
 
-  // 7) URL shorteners
-  const shorteners = ["bit.ly","tinyurl.com","t.co","ow.ly","buff.ly","is.gd","goo.gl","rebrand.ly","rb.gy"];
-  if (shorteners.some(s => hostname === s || hostname.endsWith("." + s))) reasons.push("Shortened URL");
+  const shorteners = [
+    "bit.ly","tinyurl.com","t.co","ow.ly","buff.ly","is.gd","goo.gl","rebrand.ly","rb.gy"
+  ];
+  if (shorteners.some((s) => hostname === s || hostname.endsWith("." + s))) {
+    reasons.push("Shortened URL (use caution)");
+  }
 
-  // 8) Non-standard port
-  if (urlObj.port && urlObj.port !== "80" && urlObj.port !== "443") reasons.push(`Uses non-standard port (${urlObj.port})`);
+  if (urlObj.port && urlObj.port !== "80" && urlObj.port !== "443") {
+    reasons.push(`Uses non-standard port (${urlObj.port})`);
+  }
 
-  // 9) Excessive path length
   if (pathname.length > 200) reasons.push("Very long path");
+  if (/%[0-9A-F]{2}/i.test(hostname) || /%[0-9A-F]{2}/i.test(pathname)) {
+    reasons.push("Contains percent-encoded characters");
+  }
 
-  // 10) Percent-encoded characters
-  if (/%[0-9A-F]{2}/i.test(hostname) || /%[0-9A-F]{2}/i.test(pathname)) reasons.push("Contains percent-encoded characters");
-
-  // 11) Suspicious query params
   const suspiciousQueryKeys = ["token","session","auth","password","passwd"];
   const urlSearchParams = new URLSearchParams(urlObj.search);
-  for (const key of suspiciousQueryKeys) if (urlSearchParams.has(key)) reasons.push(`Contains query param "${key}"`);
+  for (const key of suspiciousQueryKeys) {
+    if (urlSearchParams.has(key)) {
+      reasons.push(`Contains query parameter "${key}"`);
+      break;
+    }
+  }
 
-  // 12) Very long hostname
-  if (hostname.length > 60) reasons.push("Very long hostname (possible autogenerated domain)");
+  if (hostname.length > 60) reasons.push("Very long hostname");
 
-  const flagged = reasons.length > 0;
-  return { flagged, reasons };
+  return { flagged: reasons.length > 0, reasons };
 }
 
-// POST endpoint
+// --- API ENDPOINT ---
 app.post(
   "/api/check-url",
   body("url").isURL({ require_protocol: true }),
@@ -135,80 +139,68 @@ app.post(
     let finalUrl = url;
 
     try {
-      // Attempt HEAD request first
+      console.log(`🔎 Checking URL: ${url}`);
+
+      // HEAD fallback
       try {
-        const headResp = await axios.head(url, { maxRedirects: 5, timeout: 8000 });
+        const headResp = await axios.head(url, { maxRedirects: 5, timeout: 8000, headers: { "User-Agent": "Mozilla/5.0" } });
         finalUrl = headResp.request?.res?.responseUrl || finalUrl;
       } catch {
-        // fallback GET request
         try {
-          const getResp = await axios.get(url, { maxRedirects: 5, timeout: 10000 });
+          const getResp = await axios.get(url, { maxRedirects: 5, timeout: 10000, headers: { "User-Agent": "Mozilla/5.0" } });
           finalUrl = getResp.request?.res?.responseUrl || finalUrl;
         } catch {
-          console.warn("⚠️ Could not fetch URL, using submitted URL");
-          finalUrl = url;
+          console.warn("⚠️ Could not follow redirects. Using original URL.");
         }
       }
 
-      // Whitelist check
       if (isWhitelisted(finalUrl)) {
-        const scan = new Scan({ submittedUrl: url, finalUrl, llmResult: null });
-        await scan.save();
+        let llmResult = null;
+        try { llmResult = await analyzeWithLLM(finalUrl, ""); } catch {}
+
+        try {
+          const scan = new Scan({ submittedUrl: url, finalUrl, llmResult });
+          await scan.save();
+        } catch (saveErr) { console.warn("⚠️ DB save skipped:", saveErr.message || saveErr); }
+
         return res.json({
           success: true,
           safe: true,
           finalUrl,
           reasons: ["Domain is whitelisted (trusted)"],
-          llmResult: null,
+          llmResult,
         });
       }
 
-      // Deterministic check
       const det = detectPhishing(finalUrl);
       if (det.flagged) {
-        const scan = new Scan({ submittedUrl: url, finalUrl, deterministicFlags: det.reasons });
-        await scan.save();
+        try { await new Scan({ submittedUrl: url, finalUrl, deterministicFlags: det.reasons }).save(); } catch {}
         return res.json({ success: true, safe: false, finalUrl, reasons: det.reasons, llmResult: null });
       }
 
-      // Fetch small HTML chunk
       let htmlContent = "";
       try {
-        const htmlResp = await axios.get(finalUrl, { timeout: 10000 });
+        const htmlResp = await axios.get(finalUrl, { timeout: 10000, headers: { "User-Agent": "Mozilla/5.0" } });
         htmlContent = String(htmlResp.data).slice(0, 8000);
-      } catch { /* ignore fetch errors */ }
+      } catch {}
 
-      // LLM analysis (optional)
       let llmResult = null;
-      try {
-        llmResult = await analyzeWithLLM(finalUrl, htmlContent);
-      } catch { /* ignore LLM errors */ }
+      try { llmResult = await analyzeWithLLM(finalUrl, htmlContent); } catch {}
 
-      // Determine final safety
-      let safe = true;
-      const reasons = [];
-      if (llmResult && llmResult.verdict) {
-        const verdict = String(llmResult.verdict).toLowerCase();
-        if (!verdict.includes("safe") && !verdict.includes("legit")) {
-          safe = false;
-          reasons.push(`LLM verdict: ${llmResult.verdict}`);
-        }
-      }
+      const safe = !(llmResult && llmResult.verdict && !["safe","legit"].some(v => llmResult.verdict.toLowerCase().includes(v)));
+      const reasons = det.reasons.concat(llmResult && llmResult.verdict && !safe ? [`LLM verdict: ${llmResult.verdict}`] : []);
 
-      const scan = new Scan({ submittedUrl: url, finalUrl, llmResult, deterministicFlags: det.reasons });
-      await scan.save();
+      try { await new Scan({ submittedUrl: url, finalUrl, llmResult, deterministicFlags: det.reasons }).save(); } catch {}
 
-      return res.json({
-        success: true,
-        safe,
-        finalUrl,
-        reasons: det.reasons.concat(reasons),
-        llmResult,
+      return res.json({ success: true, safe, finalUrl, reasons, llmResult });
+    } catch (error) {
+      console.error("❌ /api/check-url thrown error:", error);
+      if (error && error.stack) console.error(error.stack);
+      return res.status(500).json({
+        error: "Failed to check site safety",
+        message: error.message || String(error),
+        stack: error.stack ? error.stack.split("\n").slice(0,10) : undefined
       });
-
-    } catch (err) {
-      console.error("❌ Error checking URL:", err.message || err);
-      return res.status(500).json({ error: "Failed to check site safety" });
     }
   }
 );
