@@ -10,3 +10,4 @@ const scanSchema = new mongoose.Schema({
 
 module.exports = mongoose.model("Scan", scanSchema);
 
+
