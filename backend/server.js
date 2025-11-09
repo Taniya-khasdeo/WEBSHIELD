@@ -22,7 +22,7 @@ app.use(
   })
 );
 
-app.options("*", cors());
+app.options(/.*/, cors());
 
 mongoose
   .connect(process.env.MONGODB_URI)
