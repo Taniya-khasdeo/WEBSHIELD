@@ -24,7 +24,8 @@ app.use(
 );
 
 // Standard OPTIONS handler
-app.options("*", cors());
+app.use(cors()); // apply CORS middleware globally
+
 
 // Connect to MongoDB
 mongoose
